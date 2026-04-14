@@ -85,3 +85,10 @@
 7. Код Apache Spark трансформации данных из снежинки/звезды в отчеты в Neo4j.
 8. Код Apache Spark трансформации данных из снежинки/звезды в отчеты в MongoDB.
 9. Код Apache Spark трансформации данных из снежинки/звезды в отчеты в Valkey.
+
+# Запуск программы
+````markdown
+git clone https://github.com/vomar3/BigDataSpark
+cd BigDataSpark
+docker compose up
+````
