@@ -53,7 +53,7 @@ product_df = product_raw_df.join(
     "product_weight", "product_color", "product_size", "product_brand",
     "product_material", "product_description", "product_rating", "product_reviews",
     "product_release_date", "product_expiry_date",
-    "supplier_id"                           # только внешний ключ
+    "supplier_id"                           
 ).distinct().withColumn("product_id", monotonically_increasing_id())
 
 sale_fact = df \

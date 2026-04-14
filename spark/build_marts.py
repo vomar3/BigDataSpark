@@ -9,14 +9,12 @@ spark = SparkSession.builder \
 pg_url = "jdbc:postgresql://lab2_postgres:5432/lab2_db"
 pg_props = {"user": "postgres", "password": "postgres", "driver": "org.postgresql.Driver"}
 
-# Чтение таблиц из звезды
 sale_df = spark.read.jdbc(pg_url, "sale", properties=pg_props)
 product_df = spark.read.jdbc(pg_url, "product", properties=pg_props)
 customer_df = spark.read.jdbc(pg_url, "customer", properties=pg_props)
 store_df = spark.read.jdbc(pg_url, "store", properties=pg_props)
 supplier_df = spark.read.jdbc(pg_url, "supplier", properties=pg_props)
 
-# ========== 1. Витрина по продуктам ==========
 product_sales = sale_df.groupBy("product_id").agg(
     F.sum("total_price").alias("revenue"),
     F.sum("quantity").alias("total_quantity")
@@ -29,7 +27,6 @@ product_rating_stats = product_df.groupBy("product_id", "product_name").agg(
     F.sum("product_reviews").alias("total_reviews")
 )
 
-# ========== 2. Витрина по клиентам ==========
 customer_sales = sale_df.groupBy("customer_id").agg(
     F.sum("total_price").alias("total_spent"),
     F.count("*").alias("order_count"),
@@ -39,7 +36,6 @@ customer_sales = sale_df.groupBy("customer_id").agg(
 top10_customers = customer_sales.orderBy(F.desc("total_spent")).limit(10)
 country_dist = customer_df.groupBy("customer_country").count()
 
-# ========== 3. Витрина по времени ==========
 time_sales = sale_df.withColumn("year", F.year("sale_date")).withColumn("month", F.month("sale_date"))
 monthly_trend = time_sales.groupBy("year", "month").agg(
     F.sum("total_price").alias("monthly_revenue"),
@@ -47,7 +43,6 @@ monthly_trend = time_sales.groupBy("year", "month").agg(
 ).orderBy("year", "month")
 yearly_revenue = time_sales.groupBy("year").agg(F.sum("total_price").alias("yearly_revenue"))
 
-# ========== 4. Витрина по магазинам ==========
 store_sales = sale_df.groupBy("store_id").agg(
     F.sum("total_price").alias("revenue"),
     F.avg("total_price").alias("avg_receipt")
@@ -57,7 +52,6 @@ top5_stores = store_sales.orderBy(F.desc("revenue")).limit(5)
 store_city_dist = store_df.groupBy("store_city", "store_country").count()
 store_avg_receipt_all = store_sales.select("store_id", "avg_receipt").join(store_df, "store_id")
 
-# ========== 5. Витрина по поставщикам ==========
 supplier_sales = sale_df.join(product_df, "product_id") \
     .groupBy("supplier_id").agg(
         F.sum("total_price").alias("revenue"),
@@ -68,7 +62,6 @@ top5_suppliers = supplier_sales.orderBy(F.desc("revenue")).limit(5)
 supplier_country_dist = supplier_df.groupBy("supplier_country").count()
 supplier_avg_price_all = supplier_sales.select("supplier_id", "avg_product_price").join(supplier_df, "supplier_id")
 
-# ========== 6. Витрина качества продукции ==========
 product_quality = product_df.select("product_id", "product_name", "product_rating", "product_reviews") \
     .join(sale_df.groupBy("product_id").agg(F.sum("quantity").alias("total_sold")), "product_id", "left") \
     .fillna(0, subset=["total_sold"])
@@ -78,7 +71,6 @@ lowest_rated = product_quality.orderBy("product_rating").limit(5)
 most_reviewed = product_quality.orderBy(F.desc("product_reviews")).limit(5)
 correlation = product_quality.stat.corr("product_rating", "total_sold")
 
-# ========== Запись в ClickHouse ==========
 client = clickhouse_connect.get_client(
     host='lab2_clickhouse',
     port=8123,
@@ -107,7 +99,6 @@ def get_clickhouse_type(spark_type, nullable=False):
     return f"Nullable({base})" if nullable else base
 
 def write_ch(df, table_name):
-    # Создаём таблицу с правильными типами (числовые могут быть Nullable)
     cols = []
     for field in df.schema.fields:
         nullable = True  # разрешаем NULL для всех
@@ -133,7 +124,6 @@ def write_ch(df, table_name):
         rows.append(tuple(r))
     client.insert(table_name, rows, column_names=columns)
 
-# Запись витрин
 write_ch(top10_products, "mart_top10_products")
 write_ch(category_revenue, "mart_category_revenue")
 write_ch(product_rating_stats, "mart_product_rating_stats")
