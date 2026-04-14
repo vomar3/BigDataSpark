@@ -1,0 +1,16 @@
+FROM apache/spark-py:latest
+
+USER root
+
+RUN apt-get update && apt-get install -y wget netcat && \
+    wget -P /opt/spark/jars https://jdbc.postgresql.org/download/postgresql-42.7.3.jar && \
+    wget -P /opt/spark/jars https://repo1.maven.org/maven2/com/clickhouse/clickhouse-jdbc/0.5.0/clickhouse-jdbc-0.5.0-shaded.jar && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN pip install clickhouse-connect
+
+COPY run_all.sh /opt/spark/work-dir/
+RUN chmod +x /opt/spark/work-dir/run_all.sh
+
+CMD ["/opt/spark/work-dir/run_all.sh"]
+COPY check_results.py /opt/spark/work-dir/

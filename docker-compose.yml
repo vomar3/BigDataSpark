@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: lab2_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lab2_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - lab2net
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: lab2_clickhouse
+    restart: always
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: lab2_db
+      CLICKHOUSE_USER: postgres
+      CLICKHOUSE_PASSWORD: postgres
+    volumes:
+      - chdata:/var/lib/clickhouse
+    networks:
+      - lab2net
+
+  spark:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile.spark
+    container_name: lab2_spark
+    depends_on:
+      - postgres
+      - clickhouse
+    environment:
+      - SPARK_MODE=client
+    volumes:
+      - ./spark:/opt/spark/work-dir
+      - ./data_csv:/opt/spark/data
+    networks:
+      - lab2net
+
+networks:
+  lab2net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  chdata:

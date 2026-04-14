@@ -1,0 +1,4 @@
+data/
+clickhouse_data/
+java_opts.txt
+*.log
